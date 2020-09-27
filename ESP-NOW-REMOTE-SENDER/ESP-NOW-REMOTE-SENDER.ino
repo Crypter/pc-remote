@@ -1,9 +1,7 @@
 #include <esp_now.h>
 #include <WiFi.h>
 #include <esp_wifi_internal.h>
-
-
-#define TRY_ESP_ACTION(action, name) if(action == ESP_OK) {Serial.println("\t+ "+String(name));} else {Serial.println("----------Error while " + String(name) + " !---------------");}
+#include <driver/adc.h>
 
 const uint8_t channel = 6;
 const uint8_t broadcast_addr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -26,6 +24,7 @@ void send_button_down(const uint32_t button_code) {
     if (!button_down) {
       packet_data[0] = 0xFF;
       packet_data[1] = button_code;
+
       esp_now_send(broadcast_addr, packet_data, 2);
       //    Serial.printf("DOWN: %08X\n", button_code);
     }
@@ -38,6 +37,7 @@ void send_button_up(const uint32_t button_code) {
     if (button_down) {
       packet_data[0] = 0x00;
       packet_data[1] = button_code;
+
       esp_now_send(broadcast_addr, packet_data, 2);
 //      Serial.printf("UP:   %08X\n", button_code);
     }
@@ -81,20 +81,20 @@ void send_button_up(const uint32_t button_code) {
 
     // ESP NOW
     WiFi.enableSTA(true);
-    WiFi.setSleep(false);
+    WiFi.setSleep(true);
 
 
-    esp_wifi_stop();
-
-    esp_wifi_deinit();
-
-    wifi_init_config_t my_config = WIFI_INIT_CONFIG_DEFAULT();
-    my_config.ampdu_tx_enable = 0;
-    my_config.ampdu_rx_enable = 0;
-
-    esp_wifi_init(&my_config);
-
-    esp_wifi_start();
+//    esp_wifi_stop();
+//
+//    esp_wifi_deinit();
+//
+//    wifi_init_config_t my_config = WIFI_INIT_CONFIG_DEFAULT();
+//    my_config.ampdu_tx_enable = 0;
+//    my_config.ampdu_rx_enable = 0;
+//
+//    esp_wifi_init(&my_config);
+//
+//    esp_wifi_start();
 
     //  TRY_ESP_ACTION( esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_ABOVE), "Set channel 40MHz");
 
@@ -129,5 +129,17 @@ void send_button_up(const uint32_t button_code) {
       counter = 0;
       memset(&timing_chain, 0, sizeof(timing_chain));
     }
-    //delay(1);
+    if (!active && timing > 10000000) {
+      
+    WiFi.mode(WIFI_OFF);
+    adc_power_off();  // adc power off disables wifi entirely, upstream bug
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, 0);
+////  esp_sleep_enable_ext1_wakeup((uint64_t)(1<<33),ESP_EXT1_WAKEUP_ALL_LOW);
+////  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+////  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+////  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+  gpio_pulldown_dis(GPIO_NUM_33);
+  gpio_pullup_en(GPIO_NUM_33);
+  esp_deep_sleep_start();
+    }
   }
