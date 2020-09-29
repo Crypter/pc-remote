@@ -13,7 +13,7 @@ void received_callback(const uint8_t *mac, const uint8_t *data, uint8_t len) {
   uint8_t ID = data[1];
   //state[1/0]: [modifier-click / regular-move] [down-horizontal / up-vertical] [keyboard / mouse]
 
-  if (ID == 0x1F || ID == 0x9F || ID == 0x1F || ID == 0x7D || ID == 0xFD || ID == 0xDD) { //mouse
+  if (ID == 0x1F || ID == 0x9F || ID == 0x1F || ID == 0x7D || ID == 0xFD || ID == 0xDD || ID == 0x3D || ID == 0xF7 ) { //mouse
     if (state) {
       if (ID == 0x1F) {
         SerialOut.write(0b010); SerialOut.write(-2);
@@ -25,10 +25,18 @@ void received_callback(const uint8_t *mac, const uint8_t *data, uint8_t len) {
         SerialOut.write(0b000); SerialOut.write(2);
       } else if (ID == 0xDD) {
         SerialOut.write( (0b110) ); SerialOut.write(MOUSEBTN_LEFT_MASK);
+      } else if (ID == 0x3D) {
+        SerialOut.write( (0b110) ); SerialOut.write(MOUSEBTN_RIGHT_MASK);
+      } else if (ID == 0xF7) {
+        SerialOut.write( (0b110) ); SerialOut.write(MOUSEBTN_MIDDLE_MASK);
       }
     } else {
         if (ID == 0xDD) {
         SerialOut.write( (0b100) ); SerialOut.write(MOUSEBTN_LEFT_MASK);
+      } else if (ID == 0x3D) {
+        SerialOut.write( (0b100) ); SerialOut.write(MOUSEBTN_RIGHT_MASK);
+      } else if (ID == 0xF7) {
+        SerialOut.write( (0b100) ); SerialOut.write(MOUSEBTN_MIDDLE_MASK);
       } else { 
         SerialOut.write(0b001); SerialOut.write(0);
       }
@@ -36,7 +44,9 @@ void received_callback(const uint8_t *mac, const uint8_t *data, uint8_t len) {
   } else { //keyboard
     if (translation_matrix[ID]) {
       if (ID == 0xBF || ID == 0x3F || ID == 0x6F)
-        SerialOut.write( (0b1001) | (state << 1) );
+        SerialOut.write( (0b1001) | (state << 1) );//media+key
+      else if (ID == 0xA7 || ID == 0x37 || ID == 0x67)
+        SerialOut.write( (0b0101) | (state << 1) ); //alt+key
       else
         SerialOut.write( (0b0001) | (state << 1) );
       SerialOut.write(translation_matrix[ID]);
