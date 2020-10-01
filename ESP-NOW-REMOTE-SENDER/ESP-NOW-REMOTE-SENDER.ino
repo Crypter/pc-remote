@@ -108,7 +108,7 @@ void IRAM_ATTR pin_toggle() {
 
 
 void setup() {
-  //    Serial.begin(115200);
+      Serial.begin(115200);
 
   memset(&timing_chain, 0, sizeof(timing_chain));
 
@@ -133,20 +133,24 @@ void loop() {
     memset(&timing_chain, 0, sizeof(timing_chain));
   }
 
-
-
-
-
-  if (!active && timing > 60*(1000000)) {
-
-    stop_wifi();
-    esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, 0);
-    ////  esp_sleep_enable_ext1_wakeup((uint64_t)(1<<33),ESP_EXT1_WAKEUP_ALL_LOW);
-    ////  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-    ////  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-    ////  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-    gpio_pulldown_dis(GPIO_NUM_33);
-    gpio_pullup_en(GPIO_NUM_33);
-    esp_deep_sleep_start();
+  if (!active && timing > 200000 && !data_to_send) {
+    esp_sleep_enable_timer_wakeup(10*60*(1000000)); //5min
+    gpio_wakeup_enable(GPIO_NUM_33, GPIO_INTR_LOW_LEVEL );
+    esp_sleep_enable_gpio_wakeup();
+    esp_light_sleep_start();
+    
+    esp_sleep_source_t wakeup_id = esp_sleep_get_wakeup_cause();
+    if ( wakeup_id == ESP_SLEEP_WAKEUP_TIMER){ //timer wakeup!
+      esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, 0);
+      ////  esp_sleep_enable_ext1_wakeup((uint64_t)(1<<33),ESP_EXT1_WAKEUP_ALL_LOW);
+      ////  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+      ////  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+      ////  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+      gpio_pulldown_dis(GPIO_NUM_33);
+      gpio_pullup_en(GPIO_NUM_33);
+      esp_deep_sleep_start();
+    }
   }
+
+
 }
