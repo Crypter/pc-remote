@@ -3,6 +3,19 @@
 #include "TrinketHidCombo.h"
 #include <SoftSerial_INT0.h>
 
+
+#define keyboard_mask 0b00000001
+#define win_mask    0b00100000
+#define alt_mask    0b00010000
+#define shift_mask  0b00001000
+#define ctrl_mask   0b00000100
+#define media_mask  0b01000000
+#define syskey_mask 0b10000000
+#define direction_mask  0b00000010
+#define mouse_click_mask  0b00000100
+
+
+
 void trinket_delay(uint32_t value) {
   uint32_t start = millis();
   while (millis() - start < value) {
@@ -19,9 +32,8 @@ void setup()
   TrinketHidCombo.begin(); // start the USB device engine and enumerate
 }
 
-uint8_t state = 0, value = 0, repeat_action = 0, update = 0;
-//state[1/0]: [mediakey / regular] [modifier-click / regular-move] [down-horizontal / up-vertical] [keyboard / mouse]
-uint8_t is_keyboard = 0, direction = 0, is_modifier = 0, is_media = 0;
+uint8_t state = 0, value = 0, update = 0;
+//state[1/0]: [syskey / no_syskey] [media / no_media] [win / no_win] [alt / no_alt] [shift / no_shift] [ctrl-click / no_ctrl-move] [down-horizontal / up-vertical] [keyboard / mouse]
 
 void loop()
 {
@@ -30,43 +42,31 @@ void loop()
     state = SerialIn.read();
     value = SerialIn.read();
     update = 1;
-    is_keyboard = state & 1;
-    direction = (state >> 1) & 1;
-    is_modifier = (state >> 2) & 1;
-    is_media = (state >> 3) & 1;
   }
 
-  if (is_keyboard && update) { //keyboard
+  if ( (state & keyboard_mask) && update) { //keyboard
     //update = 0;
-    if (!direction) {
-      TrinketHidCombo.pressKey(0, 0);
+    if (state & media_mask) {
+      TrinketHidCombo.pressMultimediaKey(value);
+      trinket_delay(100);
+    } else if (state & syskey_mask) {
+      TrinketHidCombo.pressSystemCtrlKey(value);
+      update = 0;
     } else {
-      if (is_modifier) {
-        TrinketHidCombo.pressKey(KEYCODE_MOD_LEFT_ALT, value);
-        update = 0;
-      } else if (is_media) {
-        TrinketHidCombo.pressMultimediaKey(value);
-        trinket_delay(100);
-      } else {
-        if (value >= 0 && value <= 3) {
-          TrinketHidCombo.pressSystemCtrlKey(value);
-          update = 0;
-        } else {
-          TrinketHidCombo.pressKey(0, value);
-          update = 0;
-        }
-      }
+      TrinketHidCombo.pressKey(((state >> 2) & 0b1111), value);
+      update = 0;
     }
-  } else if (!is_keyboard) { //mouse
-    if (is_modifier) {
+  } else if (!(state & keyboard_mask)) { //mouse
+    if (state & mouse_click_mask) {
       if (update) {
-        if (direction) TrinketHidCombo.mouseMove(0, 0, value);
-        else TrinketHidCombo.mouseMove(0, 0, 0);
+        TrinketHidCombo.mouseMove(0, 0, value);
+        update=0;
       }
     } else {
       int8_t direction_cast = 0;
       direction_cast |= value;
-      if (value) TrinketHidCombo.mouseMove(direction * direction_cast, (!direction)*direction_cast, 0);
+      if (value || update) TrinketHidCombo.mouseMove((!!(state & direction_mask)) * direction_cast, (!(state & direction_mask))*direction_cast, 0);
+      update=0;
     }
   }
 

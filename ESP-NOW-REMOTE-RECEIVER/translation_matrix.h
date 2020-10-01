@@ -134,18 +134,26 @@
 uint8_t translation_matrix[0xFF];
 void init_matrix(){
   memset(translation_matrix, 0, 0xFF);
-translation_matrix[0xEF]=SYSCTRLKEY_WAKE; //power
+
+translation_matrix[0xEF]=KEYCODE_F4; //alt
 translation_matrix[0x56]=SYSCTRLKEY_SLEEP; //eco
 
 translation_matrix[0xFF]=KEYCODE_PAGE_UP;
 translation_matrix[0x7F]=KEYCODE_PAGE_DOWN;
 
-translation_matrix[0x37]=KEYCODE_PAGE_UP;
-translation_matrix[0x67]=KEYCODE_PAGE_DOWN;
+translation_matrix[0x37]=KEYCODE_PAGE_UP; //alt
+translation_matrix[0x67]=KEYCODE_PAGE_DOWN; //alt
+
+
+translation_matrix[0x7B]=KEYCODE_PAGE_UP; //ctrl
+translation_matrix[0x63]=KEYCODE_PAGE_DOWN; //ctrl
 
 translation_matrix[0xBF]=MMKEY_VOL_UP;
 translation_matrix[0x3F]=MMKEY_VOL_DOWN;
 translation_matrix[0x6F]=MMKEY_MUTE;
+translation_matrix[0x39]=MMKEY_PLAYPAUSE;
+translation_matrix[0x71]=MMKEY_STOP;
+
 
 translation_matrix[0x57]=KEYCODE_ENTER;
 translation_matrix[0xB7]=KEYCODE_ARROW_UP;
@@ -155,17 +163,14 @@ translation_matrix[0x97]=KEYCODE_ARROW_RIGHT;
 
 translation_matrix[0xEB]=KEYCODE_ESC;
 translation_matrix[0x35]=KEYCODE_TAB;
-translation_matrix[0xA7]=KEYCODE_TAB;
+translation_matrix[0xA7]=KEYCODE_TAB; //alt
+translation_matrix[0x2F]=KEYCODE_TAB; //win
 translation_matrix[0xF3]=KEYCODE_F11;
 translation_matrix[0xF0]=KEYCODE_F5;
 translation_matrix[0xB1]=KEYCODE_B;
 translation_matrix[0x79]=KEYCODE_W;
 
-
-
-
-
-
+translation_matrix[0xFB]=KEYCODE_O; //ctrl+win - on screen keyboard
 
 
 }
