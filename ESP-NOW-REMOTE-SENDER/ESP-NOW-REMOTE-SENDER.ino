@@ -50,6 +50,7 @@ void send_data() {
   if (data_to_send) {
     start_wifi();
     esp_now_send(broadcast_addr, packet_data, 2);
+    esp_now_send(broadcast_addr, packet_data, 2);
     stop_wifi();
     data_to_send = 0;
   }

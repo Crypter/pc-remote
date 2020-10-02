@@ -74,9 +74,18 @@ const uint8_t broadcast_addr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 //  }
 //}
 
+uint8_t last_data[2]={0,0};
+
 void received_callback(const uint8_t *mac, const uint8_t *data, uint8_t len) {
   uint8_t state = !!data[0];
   uint8_t ID = data[1];
+
+  if (data[0]==last_data[0] && data[1]==last_data[1]) {
+    Serial.print("!");
+    return;
+  }
+  last_data[0]=data[0];
+  last_data[1]=data[1];
   //state[1/0]: [syskey / no_syskey] [media / no_media] [win / no_win] [alt / no_alt] [shift / no_shift] [ctrl-click / no_ctrl-move] [down-horizontal / up-vertical] [keyboard / mouse]
 
   //  if (ID == 0x2A) { //guide
@@ -135,7 +144,7 @@ void received_callback(const uint8_t *mac, const uint8_t *data, uint8_t len) {
       }
     }
   }
-  Serial.printf("State: %d, ID: %02X\n", state, ID);
+  Serial.printf("\nState: %d, ID: %02X", state, ID);
 }
 
 
