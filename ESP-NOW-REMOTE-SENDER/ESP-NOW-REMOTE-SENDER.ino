@@ -3,40 +3,18 @@
 #include <esp_wifi_internal.h>
 #include <driver/adc.h>
 
-const uint8_t channel = 6;
+const uint8_t channel = 1;
 const uint8_t broadcast_addr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 uint8_t packet_data[2] = {0, 0};
 
 uint8_t wifi_state = 0;
 uint8_t data_to_send = 0;
 
-void start_wifi() {
-  // ESP NOW
-  adc_power_on();
-  WiFi.enableSTA(true);
-  WiFi.setSleep(true);
-
-  esp_now_init();
-  esp_now_peer_info_t brcst;
-  memset(&brcst, 0, sizeof(brcst));
-  memcpy(brcst.peer_addr, broadcast_addr, ESP_NOW_ETH_ALEN);
-  brcst.channel = 6;
-  //  brcst.ifidx = ESP_IF_WIFI_STA;
-  esp_now_add_peer(&brcst);
-  wifi_state = 1;
-}
-
-void stop_wifi() {
-  esp_now_deinit();
-  WiFi.mode( WIFI_MODE_NULL );
-  adc_power_off();  // adc power off disables wifi entirely, upstream bug
-  wifi_state = 0;
-}
-
 
 
 
 int32_t last_signal = 0;
+int32_t last_send = 0;
 int32_t delta_signal = 0;
 uint16_t timing_chain[4096];
 volatile uint16_t counter = 0, marker = 0, decoder = 0;
@@ -46,14 +24,49 @@ volatile uint8_t active = 0;
 uint32_t current_code = 0, last_code = 0;
 uint8_t button_down = 0;
 
+
+void start_wifi() {
+  // ESP NOW
+  if (!wifi_state){
+  adc_power_on();
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
+  esp_wifi_start();
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+
+  esp_now_init();
+  esp_now_peer_info_t brcst;
+  memset(&brcst, 0, sizeof(brcst));
+  memcpy(brcst.peer_addr, broadcast_addr, ESP_NOW_ETH_ALEN);
+  brcst.channel = channel;
+  brcst.ifidx = ESP_IF_WIFI_STA;
+  esp_now_add_peer(&brcst);
+  }
+  wifi_state = 1;
+}
+
+void stop_wifi() {
+  if (wifi_state && millis()-last_send>200){
+  esp_now_deinit();
+  esp_wifi_stop();
+  esp_wifi_set_promiscuous(false);
+  WiFi.mode( WIFI_MODE_NULL );
+  adc_power_off();  // adc power off disables wifi entirely, upstream bug
+  wifi_state = 0;
+  }
+}
+
+
 void send_data() {
   if (data_to_send) {
     start_wifi();
     esp_now_send(broadcast_addr, packet_data, 2);
     esp_now_send(broadcast_addr, packet_data, 2);
-    stop_wifi();
     data_to_send = 0;
+    last_send=millis();
   }
+  stop_wifi();
 }
 
 void send_button_down(const uint32_t button_code) {
@@ -82,6 +95,7 @@ void send_button_up(const uint32_t button_code) {
     button_down = 0;
   }
 }
+
 void IRAM_ATTR pin_toggle() {
   delta_signal = last_signal;
   last_signal = micros();
@@ -108,6 +122,13 @@ void IRAM_ATTR pin_toggle() {
 }
 
 
+void IRAM_ATTR debug_button() {
+  data_to_send=1;
+  if (digitalRead(0)) send_button_up(0x6F); //mute
+  else send_button_down(0x6F);
+  Serial.println(digitalRead(0));
+}
+
 void setup() {
       Serial.begin(115200);
 
@@ -115,12 +136,16 @@ void setup() {
 
   pinMode(33, INPUT_PULLUP);
   attachInterrupt(33, pin_toggle, RISING);
+//pinMode(0, INPUT_PULLUP);
+//attachInterrupt(0, debug_button, CHANGE);
 
 }
 
 void loop() {
 
   send_data();
+//  return;
+
   int32_t timing = (micros() - last_signal);
   if (active && timing > 100000) {
     //        Serial.print("active: "); Serial.print(active); Serial.print(", timing: "); Serial.print(timing); Serial.print(", counter: "); Serial.println(counter-marker);
@@ -134,8 +159,8 @@ void loop() {
     memset(&timing_chain, 0, sizeof(timing_chain));
   }
 
-  if (!active && timing > 200000 && !data_to_send) {
-    esp_sleep_enable_timer_wakeup(10*60*(1000000)); //5min
+  if (!active && timing > 500000 && !data_to_send && !wifi_state) {
+    esp_sleep_enable_timer_wakeup(5*60*(1000000)); //5min
     gpio_wakeup_enable(GPIO_NUM_33, GPIO_INTR_LOW_LEVEL );
     esp_sleep_enable_gpio_wakeup();
     esp_light_sleep_start();

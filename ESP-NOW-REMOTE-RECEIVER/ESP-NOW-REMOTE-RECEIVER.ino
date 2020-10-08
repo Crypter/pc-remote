@@ -15,7 +15,7 @@
 
 HardwareSerial SerialOut(1);
 
-const uint8_t channel = 6;
+const uint8_t channel = 1;
 const uint8_t broadcast_addr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 //void print_text(const char *input = 0, const uint16_t length = 0) {
@@ -152,8 +152,8 @@ void setup() {
   init_matrix();
   Serial.begin(115200);
   SerialOut.begin(9600, SERIAL_8N1, -1, 21);
-
-  WiFi.enableSTA(true);
+  WiFi.disconnect();
+  WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
 
 
@@ -166,10 +166,10 @@ void setup() {
   my_config.ampdu_rx_enable = 0;
 
   esp_wifi_init(&my_config);
-
+  esp_wifi_set_ps(WIFI_PS_NONE);
   esp_wifi_start();
-
-  //  TRY_ESP_ACTION( esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE), "Set channel");
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
 
   //  TRY_ESP_ACTION( esp_wifi_internal_set_fix_rate(ESP_IF_WIFI_STA, true, WIFI_PHY_RATE_54M), "Fixed rate set up");
   //  TRY_ESP_ACTION( esp_wifi_internal_set_fix_rate(ESP_IF_WIFI_STA, true, WIFI_PHY_RATE_LORA_250K), "Fixed rate set up");
@@ -185,7 +185,7 @@ void setup() {
   esp_now_peer_info_t brcst;
   memset(&brcst, 0, sizeof(brcst));
   memcpy(brcst.peer_addr, broadcast_addr, ESP_NOW_ETH_ALEN);
-  brcst.channel = 6;
+  brcst.channel = channel;
   brcst.ifidx = ESP_IF_WIFI_STA;
   esp_now_add_peer(&brcst);
 
