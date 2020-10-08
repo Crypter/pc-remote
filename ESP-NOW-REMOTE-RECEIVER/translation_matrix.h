@@ -172,5 +172,53 @@ translation_matrix[0x79]=KEYCODE_W;
 
 translation_matrix[0xFB]=KEYCODE_O; //ctrl+win - on screen keyboard
 
-
 }
+
+
+//EF  on-off
+//56  energy
+//F3  av. mode
+//2F  input
+//F0  tv/rad
+//77  1
+//B7  2
+//37  3
+//D7  4
+//57  5
+//97  6
+//17  7
+//E7  8
+//67  9
+//F7  0
+//35  list
+//A7  quick view
+//BF  vol +
+//3F  vol- 
+//FF  prog. +
+//7F  prog. - 
+//2A  guide
+//3D  menu
+//87  fav
+//61  ratio
+//6F  mute
+//FD  arrow up
+//7D  arrow down
+//9F  arrow right
+//1F  arrow left
+//DD  ok button
+//EB  back
+//AA  info
+//25  exit
+//B1  red button
+//71  green button
+//39  yellow button
+//79  blue button 
+//FB  text
+//7B  t.opot
+//63  subtitle
+//72  stop
+//F2  play
+//A2  pause
+//0E  rew
+//8E  forward
+//76  ad
