@@ -171,6 +171,8 @@ translation_matrix[0xB1]=KEYCODE_B;
 translation_matrix[0x79]=KEYCODE_W;
 
 translation_matrix[0xFB]=KEYCODE_O; //ctrl+win - on screen keyboard
+translation_matrix[0x87]=0x8A; //WWW - on screen keyboard
+
 
 }
 

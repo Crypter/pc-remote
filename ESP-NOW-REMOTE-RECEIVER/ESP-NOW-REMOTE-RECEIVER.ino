@@ -74,18 +74,19 @@ const uint8_t broadcast_addr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 //  }
 //}
 
-uint8_t last_data[2]={0,0};
+uint8_t last_data[2] = {0, 0}, to_process = 0, loop_run = 0;
+uint32_t last_input = 0;
 
 void received_callback(const uint8_t *mac, const uint8_t *data, uint8_t len) {
-  uint8_t state = !!data[0];
-  uint8_t ID = data[1];
 
-  if (data[0]==last_data[0] && data[1]==last_data[1]) {
+  if (data[0] == last_data[0] && data[1] == last_data[1]) {
     Serial.print("!");
     return;
   }
-  last_data[0]=data[0];
-  last_data[1]=data[1];
+  last_data[0] = data[0];
+  last_data[1] = data[1];
+  last_input = millis();
+  to_process = 1;
   //state[1/0]: [syskey / no_syskey] [media / no_media] [win / no_win] [alt / no_alt] [shift / no_shift] [ctrl-click / no_ctrl-move] [down-horizontal / up-vertical] [keyboard / mouse]
 
   //  if (ID == 0x2A) { //guide
@@ -97,54 +98,7 @@ void received_callback(const uint8_t *mac, const uint8_t *data, uint8_t len) {
   //  }
 
 
-  if (ID == 0x1F || ID == 0x9F || ID == 0x1F || ID == 0x7D || ID == 0xFD || ID == 0xDD || ID == 0x3D || ID == 0xF7 ) { //mouse
-    if (state) {
-      if (ID == 0x1F) {
-        SerialOut.write(1 * direction_mask); SerialOut.write(-2);
-      } else if (ID == 0x9F) {
-        SerialOut.write(1 * direction_mask); SerialOut.write(2);
-      } else if (ID == 0xFD) {
-        SerialOut.write(0 * direction_mask); SerialOut.write(-2);
-      } else if (ID == 0x7D) {
-        SerialOut.write(0 * direction_mask); SerialOut.write(2);
-      } else if (ID == 0xDD) {
-        SerialOut.write(mouse_click_mask); SerialOut.write(MOUSEBTN_LEFT_MASK);
-      } else if (ID == 0x3D) {
-        SerialOut.write(mouse_click_mask); SerialOut.write(MOUSEBTN_RIGHT_MASK);
-      } else if (ID == 0xF7) {
-        SerialOut.write(mouse_click_mask); SerialOut.write(MOUSEBTN_MIDDLE_MASK);
-      }
-    } else {
-      SerialOut.write(0); SerialOut.write(0);
-    }
-  } else { //keyboard
-    if (translation_matrix[ID]) {
-      uint8_t modifiers = keyboard_mask;
-      if (ID == 0x56)
-        modifiers |= syskey_mask * state;
-      if (ID == 0xBF || ID == 0x3F || ID == 0x6F || ID == 0x39 || ID == 0x71)
-        modifiers |= media_mask * state;
-      if (ID == 0xA7 || ID == 0x37 || ID == 0x67 || ID == 0xEF )
-        modifiers |= alt_mask * state;
-      if (ID == 0x2F || ID == 0xFB)
-        modifiers |= win_mask * state;
-      if (ID == 0xFB || ID == 0x63 || ID == 0x7B)
-        modifiers |= ctrl_mask * state;
 
-      if (ID == 0x6F || ID == 0x39 || ID == 0x71) { //media keys with immediate release
-        if (state) {
-          SerialOut.write(modifiers);
-          SerialOut.write(translation_matrix[ID]);
-          SerialOut.write(modifiers);
-          SerialOut.write(0);
-        }
-      } else {
-        SerialOut.write(modifiers);
-        SerialOut.write(translation_matrix[ID]*state);
-      }
-    }
-  }
-  Serial.printf("\nState: %d, ID: %02X", state, ID);
 }
 
 
@@ -192,6 +146,70 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  if (to_process || loop_run) {
+    uint8_t state = !!last_data[0];
+    uint8_t ID = last_data[1];
+    uint32_t since_last_input = millis() - last_input;
+    if (ID == 0x1F || ID == 0x9F || ID == 0x1F || ID == 0x7D || ID == 0xFD || ID == 0xDD || ID == 0x3D || ID == 0xF7 ) { //mouse
+      if (state) {
+        if (ID == 0x1F) {
+          SerialOut.write(1 * direction_mask); SerialOut.write(-1 * min( (since_last_input * since_last_input) / (1000000)+1, (uint32_t)5));
+          loop_run = 1;
+          delay(100);
+        } else if (ID == 0x9F) {
+          SerialOut.write(1 * direction_mask); SerialOut.write(1 * min( (since_last_input * since_last_input) / (1000000)+1, (uint32_t)5));
+          loop_run = 1;
+          delay(100);
+        } else if (ID == 0xFD) {
+          SerialOut.write(0 * direction_mask); SerialOut.write(-1 * min( (since_last_input * since_last_input) / (1000000)+1, (uint32_t)5));
+          loop_run = 1;
+          delay(100);
+        } else if (ID == 0x7D) {
+          SerialOut.write(0 * direction_mask); SerialOut.write(1 * min( (since_last_input * since_last_input) / (1000000)+1, (uint32_t)5));
+          loop_run = 1;
+          delay(100);
+        } else if (ID == 0xDD) {
+          SerialOut.write(mouse_click_mask); SerialOut.write(MOUSEBTN_LEFT_MASK);
+        } else if (ID == 0x3D) {
+          SerialOut.write(mouse_click_mask); SerialOut.write(MOUSEBTN_RIGHT_MASK);
+        } else if (ID == 0xF7) {
+          SerialOut.write(mouse_click_mask); SerialOut.write(MOUSEBTN_MIDDLE_MASK);
+        }
+      } else {
+        SerialOut.write(0); SerialOut.write(0);
+        loop_run = 0;
+      }
+    } else { //keyboard
+      if (translation_matrix[ID]) {
+        uint8_t modifiers = keyboard_mask;
+        if (ID == 0x56)
+          modifiers |= syskey_mask * state;
+        if (ID == 0xBF || ID == 0x3F || ID == 0x6F || ID == 0x39 || ID == 0x71 || ID == 0x87) {
+          modifiers |= media_mask * state;
+        }
+        if (ID == 0xA7 || ID == 0x37 || ID == 0x67 || ID == 0xEF )
+          modifiers |= alt_mask * state;
+        if (ID == 0x2F || ID == 0xFB)
+          modifiers |= win_mask * state;
+        if (ID == 0xFB || ID == 0x63 || ID == 0x7B)
+          modifiers |= ctrl_mask * state;
+
+        if (ID == 0x6F || ID == 0x39 || ID == 0x71 || ID == 0x87) { //media keys with immediate release
+          if (state) {
+            SerialOut.write(modifiers);
+            SerialOut.write(translation_matrix[ID]);
+            SerialOut.write(modifiers);
+            SerialOut.write(0);
+          }
+        } else {
+          SerialOut.write(modifiers);
+          SerialOut.write(translation_matrix[ID]*state);
+        }
+      Serial.printf("\nMatched: %02X", translation_matrix[ID]);
+      }
+    }
+    Serial.printf("\nState: %d, ID: %02X", state, ID);
+    to_process = 0;
+  }
 
 }
