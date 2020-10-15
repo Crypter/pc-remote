@@ -130,7 +130,7 @@ void IRAM_ATTR debug_button() {
 }
 
 void setup() {
-      Serial.begin(115200);
+//      Serial.begin(115200);
 
   memset(&timing_chain, 0, sizeof(timing_chain));
 
