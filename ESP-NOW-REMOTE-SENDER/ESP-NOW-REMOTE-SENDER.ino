@@ -24,12 +24,14 @@ uint8_t button_down = 0;
 
 void packet_sent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   wifi_sent++;
+  
+  last_send=millis();
 //  Serial.println("ACK");
 //  Serial.flush();
 }
 
 void stop_wifi() {
-  if (wifi_state && wifi_sent>=2){
+  if (wifi_state && wifi_sent>=2 && millis()-last_send>150){
   esp_now_deinit();
   esp_wifi_stop();
   esp_wifi_set_promiscuous(false);
@@ -70,7 +72,6 @@ void send_data() {
     esp_now_send(broadcast_addr, packet_data, 2);
     esp_now_send(broadcast_addr, packet_data, 2);
     data_to_send = 0;
-    last_send=millis();
   }
   stop_wifi();
 }
